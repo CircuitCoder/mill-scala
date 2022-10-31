@@ -37,20 +37,21 @@ object PathRef {
       }
       if (os.exists(path)) {
         for (
-          (path, attrs) <-
+          (current, attrs) <-
             os.walk.attrs(path, includeTarget = true, followLinks = true).sortBy(_._1.toString)
         ) {
-          digest.update(path.toString.getBytes)
+          val rel = current.relativeTo(path)
+          digest.update(rel.toString.getBytes)
           if (!attrs.isDir) {
             if (isPosix) {
-              updateWithInt(os.perms(path, followLinks = false).value)
+              updateWithInt(os.perms(current, followLinks = false).value)
             }
             if (quick) {
               val value = (attrs.mtime, attrs.size).hashCode()
               updateWithInt(value)
-            } else if (jnio.Files.isReadable(path.toNIO)) {
+            } else if (jnio.Files.isReadable(current.toNIO)) {
               val is =
-                try Some(os.read.inputStream(path))
+                try Some(os.read.inputStream(current))
                 catch {
                   case _: jnio.FileSystemException =>
                     // This is known to happen, when we try to digest a socket file.

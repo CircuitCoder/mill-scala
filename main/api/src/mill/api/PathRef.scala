@@ -25,6 +25,22 @@ object PathRef {
    * @return
    */
   def apply(path: os.Path, quick: Boolean = false): PathRef = {
+    inner(path, quick, _.toString().getBytes())
+  }
+
+  /**
+   * Create a [[PathRef]] by recursively digesting the content of a given `path`, using path relativized to a base path.
+   * @param base The base path.
+   * @param path The digested path.
+   * @param quick If `true` the digest is only based to some file attributes (like mtime and size).
+   *              If `false` the digest is created of the files content.
+   * @return
+   */
+  def rel(base: os.Path, path: os.RelPath, quick: Boolean = false): PathRef = {
+    inner(path.resolveFrom(base), quick, _.relativeTo(base).toString().getBytes())
+  }
+
+  private def inner(path: os.Path, quick: Boolean, pathDigest: os.Path => Array[Byte]): PathRef = {
     val sig = {
       val isPosix = path.wrapped.getFileSystem.supportedFileAttributeViews().contains("posix")
       val digest = MessageDigest.getInstance("MD5")
@@ -40,7 +56,7 @@ object PathRef {
           (path, attrs) <-
             os.walk.attrs(path, includeTarget = true, followLinks = true).sortBy(_._1.toString)
         ) {
-          digest.update(path.toString.getBytes)
+          digest.update(pathDigest(path))
           if (!attrs.isDir) {
             if (isPosix) {
               updateWithInt(os.perms(path, followLinks = false).value)

@@ -16,6 +16,7 @@ import mill.scalalib.bsp.{BspBuildTarget, BspModule}
 import scala.jdk.CollectionConverters._
 import mainargs.Flag
 import mill.scalalib.dependency.versions.{ValidVersion, Version}
+import mill.api.Ctx
 
 /**
  * Core configuration required to compile a single Scala compilation target
@@ -49,7 +50,8 @@ trait ScalaModule extends JavaModule with SemanticDbJavaModule { outer =>
    * All individual source files fed into the Zinc compiler.
    */
   override def allSourceFiles: T[Seq[PathRef]] = T {
-    Lib.findSourceFiles(allSources(), Seq("scala", "java")).map(PathRef(_))
+    val target: Ctx.Workspace = implicitly
+    Lib.findSourceFiles(allSources(), Seq("scala", "java")).map(e => PathRef.rel(target.workspace, e.relativeTo(target.workspace)))
   }
 
   /**
